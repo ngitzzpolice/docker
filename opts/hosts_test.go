@@ -2,6 +2,7 @@ package opts
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 )
 
@@ -14,6 +15,10 @@ func TestParseHost(t *testing.T) {
 		"tcp://:port":        "Invalid bind address format: :port",
 		"tcp://invalid":      "Invalid bind address format: invalid",
 		"tcp://invalid:port": "Invalid bind address format: invalid:port",
+	}
+	if runtime.GOOS == "windows" {
+		// url.Parse on Windows chokes on unescaped spaces. Look for the url.Parse error instead.
+		invalid["something with spaces"] = `parse tcp://something with spaces: invalid character " " in host name`
 	}
 	valid := map[string]string{
 		"":                         DefaultHost,
