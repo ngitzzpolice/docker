@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/layer"
+	"github.com/docker/docker/libcontainerd"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/parsers"
 	"github.com/docker/docker/pkg/parsers/kernel"
@@ -1056,4 +1057,65 @@ func (daemon *Daemon) conditionalUnmountOnCleanup(container *container.Container
 func restoreCustomImage(is image.Store, ls layer.Store, rs reference.Store) error {
 	// Unix has no custom images to register
 	return nil
+}
+
+func (daemon *Daemon) stats(c *container.Container) (*types.StatsJSON, error) {
+	if !c.IsRunning() {
+		return nil, errNotRunning{c.ID}
+	}
+	stats, err := daemon.containerd.Stats(c.ID)
+	if err != nil {
+		return nil, err
+	}
+	s := &types.StatsJSON{}
+	cgs := stats.CgroupStats
+	if cgs != nil {
+		s.BlkioStats = types.BlkioStats{
+			IoServiceBytesRecursive: copyBlkioEntry(cgs.BlkioStats.IoServiceBytesRecursive),
+			IoServicedRecursive:     copyBlkioEntry(cgs.BlkioStats.IoServicedRecursive),
+			IoQueuedRecursive:       copyBlkioEntry(cgs.BlkioStats.IoQueuedRecursive),
+			IoServiceTimeRecursive:  copyBlkioEntry(cgs.BlkioStats.IoServiceTimeRecursive),
+			IoWaitTimeRecursive:     copyBlkioEntry(cgs.BlkioStats.IoWaitTimeRecursive),
+			IoMergedRecursive:       copyBlkioEntry(cgs.BlkioStats.IoMergedRecursive),
+			IoTimeRecursive:         copyBlkioEntry(cgs.BlkioStats.IoTimeRecursive),
+			SectorsRecursive:        copyBlkioEntry(cgs.BlkioStats.SectorsRecursive),
+		}
+		cpu := cgs.CpuStats
+		s.CPUStats = types.CPUStats{
+			CPUUsage: types.CPUUsage{
+				TotalUsage:        cpu.CpuUsage.TotalUsage,
+				PercpuUsage:       cpu.CpuUsage.PercpuUsage,
+				UsageInKernelmode: cpu.CpuUsage.UsageInKernelmode,
+				UsageInUsermode:   cpu.CpuUsage.UsageInUsermode,
+			},
+			ThrottlingData: types.ThrottlingData{
+				Periods:          cpu.ThrottlingData.Periods,
+				ThrottledPeriods: cpu.ThrottlingData.ThrottledPeriods,
+				ThrottledTime:    cpu.ThrottlingData.ThrottledTime,
+			},
+		}
+		mem := cgs.MemoryStats.Usage
+		s.MemoryStats = types.MemoryStats{
+			Usage:    mem.Usage,
+			MaxUsage: mem.MaxUsage,
+			Stats:    cgs.MemoryStats.Stats,
+			Failcnt:  mem.Failcnt,
+		}
+	}
+	s.Read = time.Unix(int64(stats.Timestamp), 0)
+
+	return s, nil
+}
+func (daemon *Daemon) containerdRestore(c *container.Container) error {
+	e := daemon.containerd.Restore(c.ID, libcontainerd.WithRestartManager(c.RestartManager(true)))
+	if e != nil {
+		logrus.Errorf("Failed to restore with containerd: %q", err)
+	}
+	return e
+}
+
+func (daemon *Daemon) setContainerd(containerdRemote libcontainerd.Remote) error {
+	var err error
+	daemon.containerd, err = containerdRemote.Client(daemon)
+	return err
 }

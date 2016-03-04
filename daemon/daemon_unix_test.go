@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/container"
+	"github.com/docker/engine-api/types"
 	containertypes "github.com/docker/engine-api/types/container"
 )
 

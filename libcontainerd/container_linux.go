@@ -26,11 +26,6 @@ type container struct {
 	processes      map[string]*process
 }
 
-// CreateOption allows to configure parameters of container creation.
-type CreateOption interface {
-	Apply(interface{}) error
-}
-
 // WithRestartManager sets the restartmanager to be used with the container.
 func WithRestartManager(rm restartmanager.RestartManager) CreateOption {
 	return restartManager{rm}

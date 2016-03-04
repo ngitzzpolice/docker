@@ -8,7 +8,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/errors"
-	"github.com/docker/docker/libcontainerd"
 	"github.com/docker/docker/runconfig"
 	containertypes "github.com/docker/engine-api/types/container"
 )
@@ -124,15 +123,10 @@ func (daemon *Daemon) containerStart(container *container.Container) (err error)
 		return err
 	}
 
-	spec, err := daemon.createSpec(container)
-	if err != nil {
+	if err := daemon.platformStart(container); err != nil {
 		return err
 	}
 
-	if err := daemon.containerd.Create(container.ID, *spec, libcontainerd.WithRestartManager(container.RestartManager(true))); err != nil {
-		container.Reset(false)
-		return err
-	}
 	daemon.LogContainerEvent(container, "start")
 	return nil
 }

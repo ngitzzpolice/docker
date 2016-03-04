@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/pkg/chrootarchive"
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/docker/pkg/system"
+	"github.com/docker/docker/restartmanager"
 	runconfigopts "github.com/docker/docker/runconfig/opts"
 	"github.com/docker/docker/utils"
 	"github.com/docker/docker/volume"
@@ -732,4 +733,36 @@ func cleanResourcePath(path string) string {
 // can be mounted locally. A no-op on non-Windows platforms
 func (container *Container) canMountFS() bool {
 	return true
+}
+
+// ExitOnNext signals to the monitor that it should not restart the container
+// after we send the kill signal.
+func (container *Container) ExitOnNext() {
+	if container.restartManager != nil {
+		container.restartManager.Cancel()
+	}
+	container.HasBeenManuallyStopped = true
+}
+
+// RestartManager returns the current restartmanager instace connected to container.
+func (container *Container) RestartManager(reset bool) restartmanager.RestartManager {
+	if reset {
+		container.RestartCount = 0
+	}
+	if container.restartManager == nil {
+		container.HasBeenManuallyStopped = false
+		container.restartManager = restartmanager.New(container.HostConfig.RestartPolicy)
+	}
+	return container.restartManager
+}
+
+// UpdateMonitor updates monitor configure for running container
+func (container *Container) UpdateMonitor(restartPolicy containertypes.RestartPolicy) {
+	type policySetter interface {
+		SetPolicy(containertypes.RestartPolicy)
+	}
+
+	if rm, ok := container.RestartManager(false).(policySetter); ok {
+		rm.SetPolicy(restartPolicy)
+	}
 }

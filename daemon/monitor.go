@@ -12,6 +12,8 @@ import (
 	"github.com/docker/docker/runconfig"
 )
 
+// TODO Windows containerd. This will require some rework.
+
 // StateChanged updates daemon state changes from containerd
 func (daemon *Daemon) StateChanged(id string, e libcontainerd.StateInfo) error {
 	c := daemon.containers.Get(id)

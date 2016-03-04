@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/docker/docker/restartmanager"
 	"github.com/docker/docker/volume"
 	containertypes "github.com/docker/engine-api/types/container"
 )
@@ -23,6 +24,10 @@ type Container struct {
 type ExitStatus struct {
 	// The exit code with which the container exited.
 	ExitCode int
+
+	// TODO Windows container. Factor this out. It is Linux specific.
+	// Whether the container encountered an OOM.
+	OOMKilled bool
 }
 
 // CreateDaemonEnvironment creates a new environment variable slice for this container.
@@ -94,4 +99,22 @@ func cleanResourcePath(path string) string {
 // for Hyper-V containers during WORKDIR execution for example.
 func (container *Container) canMountFS() bool {
 	return !containertypes.Isolation.IsHyperV(container.HostConfig.Isolation)
+}
+
+// ExitOnNext signals to the monitor that it should not restart the container
+// after we send the kill signal.
+// TODO Windows containerd. What should be done here?
+func (container *Container) ExitOnNext() {
+	container.HasBeenManuallyStopped = true
+}
+
+// RestartManager returns the current restartmanager instace connected to container.
+// TODO Windows containerd. What should be done here?
+func (container *Container) RestartManager(reset bool) restartmanager.RestartManager {
+	return nil
+}
+
+// UpdateMonitor updates monitor configure for running container
+// TODO Windows containerd. What should be done here?
+func (container *Container) UpdateMonitor(restartPolicy containertypes.RestartPolicy) {
 }

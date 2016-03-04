@@ -36,6 +36,7 @@ func (daemon *Daemon) ContainerStop(name string, seconds int) error {
 // process to exit. If a negative duration is given, Stop will wait
 // for the initial signal forever. If the container is not running Stop returns
 // immediately.
+// TODO Windows containerd. This will require some rework
 func (daemon *Daemon) containerStop(container *container.Container, seconds int) error {
 	if !container.IsRunning() {
 		return nil

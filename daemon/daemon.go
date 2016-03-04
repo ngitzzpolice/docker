@@ -286,8 +286,8 @@ func (daemon *Daemon) restore() error {
 			logrus.Errorf("Failed to register container %s: %s", c.ID, err)
 			continue
 		}
-		if err := daemon.containerd.Restore(c.ID, libcontainerd.WithRestartManager(c.RestartManager(true))); err != nil {
-			logrus.Errorf("Failed to restore with containerd: %q", err)
+		// Restore using containerd. Currently a no-op on Windows
+		if err := daemon.containerdRestore(c); err != nil {
 			continue
 		}
 		// fixme: only if not running
@@ -582,6 +582,7 @@ func (daemon *Daemon) registerLink(parent, child *container.Container, alias str
 
 // NewDaemon sets up everything for the daemon to be able to service
 // requests from the webserver.
+// TODO Windows containerd. Refactor to not have containerdRemote parameter on Windows
 func NewDaemon(config *Config, registryService *registry.Service, containerdRemote libcontainerd.Remote) (daemon *Daemon, err error) {
 	setDefaultMtu(config)
 
@@ -795,8 +796,7 @@ func NewDaemon(config *Config, registryService *registry.Service, containerdRemo
 	}
 	go d.execCommandGC()
 
-	d.containerd, err = containerdRemote.Client(d)
-	if err != nil {
+	if err := d.setContainerd(containerdRemote); err != nil {
 		return nil, err
 	}
 
@@ -914,54 +914,6 @@ func (daemon *Daemon) Unmount(container *container.Container) {
 
 func (daemon *Daemon) kill(c *container.Container, sig int) error {
 	return daemon.containerd.Signal(c.ID, sig)
-}
-
-func (daemon *Daemon) stats(c *container.Container) (*types.StatsJSON, error) {
-	if !c.IsRunning() {
-		return nil, errNotRunning{c.ID}
-	}
-	stats, err := daemon.containerd.Stats(c.ID)
-	if err != nil {
-		return nil, err
-	}
-	s := &types.StatsJSON{}
-	cgs := stats.CgroupStats
-	if cgs != nil {
-		s.BlkioStats = types.BlkioStats{
-			IoServiceBytesRecursive: copyBlkioEntry(cgs.BlkioStats.IoServiceBytesRecursive),
-			IoServicedRecursive:     copyBlkioEntry(cgs.BlkioStats.IoServicedRecursive),
-			IoQueuedRecursive:       copyBlkioEntry(cgs.BlkioStats.IoQueuedRecursive),
-			IoServiceTimeRecursive:  copyBlkioEntry(cgs.BlkioStats.IoServiceTimeRecursive),
-			IoWaitTimeRecursive:     copyBlkioEntry(cgs.BlkioStats.IoWaitTimeRecursive),
-			IoMergedRecursive:       copyBlkioEntry(cgs.BlkioStats.IoMergedRecursive),
-			IoTimeRecursive:         copyBlkioEntry(cgs.BlkioStats.IoTimeRecursive),
-			SectorsRecursive:        copyBlkioEntry(cgs.BlkioStats.SectorsRecursive),
-		}
-		cpu := cgs.CpuStats
-		s.CPUStats = types.CPUStats{
-			CPUUsage: types.CPUUsage{
-				TotalUsage:        cpu.CpuUsage.TotalUsage,
-				PercpuUsage:       cpu.CpuUsage.PercpuUsage,
-				UsageInKernelmode: cpu.CpuUsage.UsageInKernelmode,
-				UsageInUsermode:   cpu.CpuUsage.UsageInUsermode,
-			},
-			ThrottlingData: types.ThrottlingData{
-				Periods:          cpu.ThrottlingData.Periods,
-				ThrottledPeriods: cpu.ThrottlingData.ThrottledPeriods,
-				ThrottledTime:    cpu.ThrottlingData.ThrottledTime,
-			},
-		}
-		mem := cgs.MemoryStats.Usage
-		s.MemoryStats = types.MemoryStats{
-			Usage:    mem.Usage,
-			MaxUsage: mem.MaxUsage,
-			Stats:    cgs.MemoryStats.Stats,
-			Failcnt:  mem.Failcnt,
-		}
-	}
-	s.Read = time.Unix(int64(stats.Timestamp), 0)
-
-	return s, nil
 }
 
 func (daemon *Daemon) subscribeToContainerStats(c *container.Container) chan interface{} {

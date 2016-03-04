@@ -11,6 +11,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	apiserver "github.com/docker/docker/api/server"
 	"github.com/docker/docker/daemon"
+	"github.com/docker/docker/libcontainerd"
 	"github.com/docker/docker/pkg/mflag"
 	"github.com/docker/docker/pkg/system"
 )
@@ -62,4 +63,25 @@ func setupConfigReloadTrap(configFile string, flags *mflag.FlagSet, reload func(
 			}
 		}
 	}()
+}
+
+func (cli *DaemonCli) initLibcontainerd() libcontainerd.Remote {
+
+	remoteOpt := []libcontainerd.RemoteOption{
+		libcontainerd.WithDebugLog(cli.Config.Debug),
+	}
+	if cli.Config.ContainerdAddr != "" {
+		remoteOpt = append(remoteOpt, libcontainerd.WithRemoteAddr(cli.Config.ContainerdAddr))
+	} else {
+		remoteOpt = append(remoteOpt, libcontainerd.WithStartDaemon(true))
+	}
+	containerdRemote, err := libcontainerd.New(filepath.Join(cli.Config.ExecRoot, "libcontainerd"), remoteOpt...)
+	if err != nil {
+		logrus.Error(err)
+	}
+	return containerdRemote
+}
+
+func cleanupRemote(cdr libcontainerd.Remote) {
+	containerdRemote.Cleanup()
 }

@@ -32,9 +32,11 @@ func (daemon *Daemon) containerInspectPre120(name string) (*types.ContainerJSON,
 }
 
 func inspectExecProcessConfig(e *exec.Config) *backend.ExecProcessConfig {
-	return &backend.ExecProcessConfig{
-		Tty:        e.ProcessConfig.Tty,
-		Entrypoint: e.ProcessConfig.Entrypoint,
-		Arguments:  e.ProcessConfig.Arguments,
-	}
+	// TODO Windows containerd What to do here?
+	//	return &backend.ExecProcessConfig{
+	//		Tty:        e.ProcessConfig.Tty,
+	//		Entrypoint: e.ProcessConfig.Entrypoint,
+	//		Arguments:  e.ProcessConfig.Arguments,
+	//	}
+	return nil
 }

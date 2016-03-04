@@ -254,15 +254,6 @@ func (container *Container) GetRootResourcePath(path string) (string, error) {
 	return symlink.FollowSymlinkInScope(filepath.Join(container.Root, cleanPath), container.Root)
 }
 
-// ExitOnNext signals to the monitor that it should not restart the container
-// after we send the kill signal.
-func (container *Container) ExitOnNext() {
-	if container.restartManager != nil {
-		container.restartManager.Cancel()
-	}
-	container.HasBeenManuallyStopped = true
-}
-
 // HostConfigPath returns the path to the container's JSON hostconfig
 func (container *Container) HostConfigPath() (string, error) {
 	return container.GetRootResourcePath("hostconfig.json")
@@ -571,17 +562,6 @@ func (container *Container) InitDNSHostConfig() {
 	}
 }
 
-// UpdateMonitor updates monitor configure for running container
-func (container *Container) UpdateMonitor(restartPolicy containertypes.RestartPolicy) {
-	type policySetter interface {
-		SetPolicy(containertypes.RestartPolicy)
-	}
-
-	if rm, ok := container.RestartManager(false).(policySetter); ok {
-		rm.SetPolicy(restartPolicy)
-	}
-}
-
 // FullHostname returns hostname and optional domain appended to it.
 func (container *Container) FullHostname() string {
 	fullHostname := container.Config.Hostname
@@ -589,16 +569,4 @@ func (container *Container) FullHostname() string {
 		fullHostname = fmt.Sprintf("%s.%s", fullHostname, container.Config.Domainname)
 	}
 	return fullHostname
-}
-
-// RestartManager returns the current restartmanager instace connected to container.
-func (container *Container) RestartManager(reset bool) restartmanager.RestartManager {
-	if reset {
-		container.RestartCount = 0
-	}
-	if container.restartManager == nil {
-		container.HasBeenManuallyStopped = false
-		container.restartManager = restartmanager.New(container.HostConfig.RestartPolicy)
-	}
-	return container.restartManager
 }
