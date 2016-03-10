@@ -6,6 +6,7 @@ import (
 	"github.com/Microsoft/hcsshim"
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/restartmanager"
+	"strings"
 )
 
 type container struct {
@@ -46,9 +47,13 @@ func (c *container) start(spec *Spec) error {
 
 	// Configure the environment for the process
 	createProcessParms.Environment = setupEnvironmentVariables(spec.Process.Env)
-	if createProcessParms.CommandLine, err = createCommandLine(spec); err != nil {
-		return err
+
+	for i, arg := range spec.Process.Args {
+		logrus.Debugf("appending: %s", arg)
+		spec.Process.Args[i] = syscall.EscapeArg(arg)
 	}
+	logrus.Debugf("commandLine: %s", createProcessParms.CommandLine)
+	createProcessParms.CommandLine = strings.Join(spec.Process.Args, " ")
 
 	// Start the command running in the container.
 	pid, _, _, _, err := hcsshim.CreateProcessInComputeSystem(c.id, false, false, false, createProcessParms)
