@@ -65,7 +65,9 @@ func setupConfigReloadTrap(configFile string, flags *mflag.FlagSet, reload func(
 	}()
 }
 
-func (cli *DaemonCli) getLibcontainerdRemoteOptions() []libcontainerd.RemoteOption {
+func (cli *DaemonCli) getContainerdRemote() libcontainerd.Remote {
+	var err error
+
 	remoteOpt := []libcontainerd.RemoteOption{
 		libcontainerd.WithDebugLog(cli.Config.Debug),
 	}
@@ -74,5 +76,10 @@ func (cli *DaemonCli) getLibcontainerdRemoteOptions() []libcontainerd.RemoteOpti
 	} else {
 		remoteOpt = append(remoteOpt, libcontainerd.WithStartDaemon(true))
 	}
-	return remoteOpt
+
+	containerdRemote, err := libcontainerd.New(filepath.Join(cli.Config.ExecRoot, "libcontainerd"), remoteOpt...)
+	if err != nil {
+		logrus.Error(err)
+	}
+	return containerdRemote
 }
