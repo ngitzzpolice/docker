@@ -77,6 +77,7 @@ type mappedDir struct {
 	ReadOnly      bool
 }
 
+// TODO Windows RTM: @darrenstahlmsft Add ProcessorCount
 type containerInit struct {
 	SystemType              string      // HCS requires this to be hard-coded to "Container"
 	Name                    string      // Name of the container. We use the docker ID.
@@ -88,6 +89,11 @@ type containerInit struct {
 	LayerFolderPath         string      // Where the layer folders are located
 	Layers                  []layer     // List of storage layers
 	ProcessorWeight         uint64      `json:",omitempty"` // CPU Shares 0..10000 on Windows; where 0 will be omitted and HCS will default.
+	ProcessorMaximum        int64       `json:",omitempty"` // CPU maximum usage percent 1..100
+	StorageIOPSMaximum      uint64      // Maximum Storage IOPS
+	StorageBandwidthMaximum uint64      // Maximum Storage Bandwidth in bytes per second
+	StorageSandboxSize      uint64      // Size in bytes that the container system drive should be expanded to if smaller
+	MemoryMaximumInMB       int64       // Maximum memory available to the container in Megabytes
 	HostName                string      // Hostname
 	MappedDirectories       []mappedDir // List of mapped directories (volumes/mounts)
 	SandboxPath             string      // Location of unmounted sandbox (used for Hyper-V containers, not Windows Server containers)
@@ -118,8 +124,32 @@ func (clnt *client) Create(containerID string, spec Spec, options ...CreateOptio
 		cu.EndpointList = spec.Windows.Networking.EndpointList
 	}
 
-	if spec.Windows.Resources != nil && spec.Windows.Resources.CPU != nil {
-		cu.ProcessorWeight = *spec.Windows.Resources.CPU.Shares
+	if spec.Windows.Resources != nil {
+		if spec.Windows.Resources.CPU != nil {
+			if spec.Windows.Resources.CPU.Shares != nil {
+				cu.ProcessorWeight = *spec.Windows.Resources.CPU.Shares
+			}
+			if spec.Windows.Resources.CPU.Percent != nil {
+				cu.ProcessorMaximum = *spec.Windows.Resources.CPU.Percent * 100 // ProcessorMaximum is a value between 1 and 10000
+			}
+		}
+		if spec.Windows.Resources.Memory != nil {
+			if spec.Windows.Resources.Memory.Limit != nil {
+				cu.MemoryMaximumInMB = *spec.Windows.Resources.Memory.Limit / 1024 / 1024
+			}
+			cu.MemoryMaximumInMB = 200
+		}
+		if spec.Windows.Resources.Storage != nil {
+			if spec.Windows.Resources.Storage.Bps != nil {
+				cu.StorageBandwidthMaximum = *spec.Windows.Resources.Storage.Bps
+			}
+			if spec.Windows.Resources.Storage.Iops != nil {
+				cu.StorageIOPSMaximum = *spec.Windows.Resources.Storage.Iops
+			}
+			if spec.Windows.Resources.Storage.SandboxSize != nil {
+				cu.StorageSandboxSize = *spec.Windows.Resources.Storage.SandboxSize
+			}
+		}
 	}
 
 	if spec.Windows.HvRuntime != nil {

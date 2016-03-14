@@ -136,7 +136,7 @@ type Storage struct {
 // Memory contains memory settings for the container
 type Memory struct {
 	// Memory limit (in bytes).
-	Limit *uint64 `json:"limit,omitempty"`
+	Limit *int64 `json:"limit,omitempty"`
 	// Memory reservation (in bytes).
 	Reservation *uint64 `json:"reservation,omitempty"`
 }
@@ -148,7 +148,7 @@ type CPU struct {
 	// CPU shares (relative weight (ratio) vs. other containers with cpu shares). Range is from 1 to 10000.
 	Shares *uint64 `json:"shares,omitempty"`
 	// Percent of available CPUs usable by the container.
-	Percent *uint64 `json:"percent,omitempty"`
+	Percent *int64 `json:"percent,omitempty"`
 }
 
 // Network network resource management information
