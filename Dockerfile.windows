@@ -75,15 +75,15 @@ RUN \
   Download-File https://raw.githubusercontent.com/jhowardmsft/docker-tdmgcc/master/binutils.zip binutils.zip; \
   \
   Write-Host INFO: Installing git...; \
-  Start-Process gitsetup.exe -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /DIR=c:\git\' -Wait; \
+  Start-Process gitsetup.exe -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /DIR=c:\git\ ' -Wait; \
   \
-  Write-Host INFO: Installing go..."; \
+  Write-Host INFO: Installing go...; \
   Start-Process msiexec -ArgumentList '-i go.msi -quiet' -Wait; \
   \
   Write-Host INFO: Unzipping compiler...; \
   c:\git\usr\bin\unzip.exe -q -o gcc.zip -d /c/gcc; \
   c:\git\usr\bin\unzip.exe -q -o runtime.zip -d /c/gcc; \
-  c:\git\usr\bin\unzip.exe -q -o binutils.zip -d /c/gcc"; \
+  c:\git\usr\bin\unzip.exe -q -o binutils.zip -d /c/gcc; \
   \
   Write-Host INFO: Removing interim files; \
   Remove-Item *.zip; \

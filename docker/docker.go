@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/client"
@@ -10,6 +11,7 @@ import (
 	"github.com/docker/docker/dockerversion"
 	flag "github.com/docker/docker/pkg/mflag"
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/docker/docker/pkg/system"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/utils"
 )
@@ -21,6 +23,11 @@ func main() {
 
 	// Set terminal emulation based on platform as required.
 	stdin, stdout, stderr := term.StdStreams()
+
+	// This fixes a performance regression in GO 1.6 for Windows
+	if runtime.GOOS == "windows" && os.Getenv("gofasttick") != "" {
+		system.SetTimerTick(1000)
+	}
 
 	logrus.SetOutput(stderr)
 

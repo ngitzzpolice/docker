@@ -15,6 +15,12 @@ type OSVersion struct {
 	Build        uint16
 }
 
+var (
+	modwinmm = syscall.NewLazyDLL("winmm.dll")
+
+	proctimeBeginPeriod = modwinmm.NewProc("timeBeginPeriod")
+)
+
 // GetOSVersion gets the operating system version on Windows. Note that
 // docker.exe must be manifested to get the correct version information.
 func GetOSVersion() (OSVersion, error) {
@@ -57,4 +63,11 @@ func CommandLineToArgv(commandLine string) ([]string, error) {
 	}
 
 	return newArgs, nil
+}
+
+// SetTimerTick sets the Windows timer period.
+func SetTimerTick(period uint32) (n int32) {
+	r0, _, _ := syscall.Syscall(proctimeBeginPeriod.Addr(), 1, uintptr(period), 0, 0)
+	n = int32(r0)
+	return
 }
