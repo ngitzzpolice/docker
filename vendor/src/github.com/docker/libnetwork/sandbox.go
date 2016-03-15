@@ -4,9 +4,11 @@ import (
 	"container/heap"
 	"encoding/json"
 	"fmt"
+	glog "log"
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libnetwork/etchosts"
@@ -515,6 +517,8 @@ func (sb *sandbox) resolveName(req string, networkName string, epList []*endpoin
 }
 
 func (sb *sandbox) SetKey(basePath string) error {
+	glog.Printf("> SetKey", time.Now().UnixNano())
+	defer func() { glog.Printf("< SetKey", time.Now().UnixNano()) }()
 	if basePath == "" {
 		return types.BadRequestErrorf("invalid sandbox key")
 	}
@@ -530,10 +534,12 @@ func (sb *sandbox) SetKey(basePath string) error {
 		sb.releaseOSSbox()
 	}
 
+	glog.Printf("> GetSandboxForExternalKey", time.Now().UnixNano())
 	osSbox, err := osl.GetSandboxForExternalKey(basePath, sb.Key())
 	if err != nil {
 		return err
 	}
+	glog.Printf("< GetSandboxForExternalKey", time.Now().UnixNano())
 
 	sb.Lock()
 	sb.osSbox = osSbox
@@ -549,14 +555,20 @@ func (sb *sandbox) SetKey(basePath string) error {
 	// If the resolver was setup before stop it and set it up in the
 	// new osl sandbox.
 	if oldosSbox != nil && sb.resolver != nil {
-		sb.resolver.Stop()
 
+		glog.Printf("- sb.resolver.Stop", time.Now().UnixNano())
+		sb.resolver.Stop()
+		glog.Printf("- sb.osSbox.InvokeFunc", time.Now().UnixNano())
 		sb.osSbox.InvokeFunc(sb.resolver.SetupFunc())
+
+		glog.Printf("> sb.resolver.Start", time.Now().UnixNano())
 		if err := sb.resolver.Start(); err != nil {
 			log.Errorf("Resolver Setup/Start failed for container %s, %q", sb.ContainerID(), err)
 		}
+		glog.Printf("< sb.resolver.Start", time.Now().UnixNano())
 	}
 
+	glog.Printf("> getConnectedEndpoints", time.Now().UnixNano())
 	for _, ep := range sb.getConnectedEndpoints() {
 		if err = sb.populateNetworkResources(ep); err != nil {
 			return err
@@ -609,6 +621,8 @@ func (sb *sandbox) releaseOSSbox() {
 }
 
 func (sb *sandbox) populateNetworkResources(ep *endpoint) error {
+	glog.Printf("> populateNetworkResources", time.Now().UnixNano())
+	defer func() { glog.Printf("< populateNetworkResources", time.Now().UnixNano()) }()
 	sb.Lock()
 	if sb.osSbox == nil {
 		sb.Unlock()
@@ -622,9 +636,12 @@ func (sb *sandbox) populateNetworkResources(ep *endpoint) error {
 	i := ep.iface
 	ep.Unlock()
 
+	glog.Printf("> needResolver", time.Now().UnixNano())
+
 	if ep.needResolver() {
 		sb.startResolver()
 	}
+	glog.Printf("> startedResolver", time.Now().UnixNano())
 
 	if i != nil && i.srcName != "" {
 		var ifaceOptions []osl.IfaceOption
@@ -636,25 +653,35 @@ func (sb *sandbox) populateNetworkResources(ep *endpoint) error {
 		if i.mac != nil {
 			ifaceOptions = append(ifaceOptions, sb.osSbox.InterfaceOptions().MacAddress(i.mac))
 		}
+		glog.Printf("> AddInterface", time.Now().UnixNano())
 
 		if err := sb.osSbox.AddInterface(i.srcName, i.dstPrefix, ifaceOptions...); err != nil {
 			return fmt.Errorf("failed to add interface %s to sandbox: %v", i.srcName, err)
 		}
+		glog.Printf("< AddInterface", time.Now().UnixNano())
+
 	}
 
 	if joinInfo != nil {
 		// Set up non-interface routes.
 		for _, r := range joinInfo.StaticRoutes {
+			glog.Printf("> AddStaticRoute", time.Now().UnixNano())
+
 			if err := sb.osSbox.AddStaticRoute(r); err != nil {
 				return fmt.Errorf("failed to add static route %s: %v", r.Destination.String(), err)
 			}
+
+			glog.Printf("z AddStaticRoute", time.Now().UnixNano())
 		}
 	}
 
+	glog.Printf("> getGatewayEndpoint", time.Now().UnixNano())
 	if ep == sb.getGatewayEndpoint() {
+		glog.Printf("> updateGateway", time.Now().UnixNano())
 		if err := sb.updateGateway(ep); err != nil {
 			return err
 		}
+		glog.Printf("< updateGateway", time.Now().UnixNano())
 	}
 
 	// Only update the store if we did not come here as part of
@@ -662,6 +689,7 @@ func (sb *sandbox) populateNetworkResources(ep *endpoint) error {
 	// not bother updating the store. The sandbox object will be
 	// deleted anyway
 	if !inDelete {
+		glog.Printf("-- storeUpdate", time.Now().UnixNano())
 		return sb.storeUpdate()
 	}
 

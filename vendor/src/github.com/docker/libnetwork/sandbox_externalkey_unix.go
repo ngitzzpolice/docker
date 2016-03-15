@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"time"
+	glog "log"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/libnetwork/types"
@@ -124,6 +126,9 @@ func (c *controller) startExternalKeyListener() error {
 }
 
 func (c *controller) acceptClientConnections(sock string, l net.Listener) {
+	f, _ := os.OpenFile("/tmp/daemon.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	glog.SetOutput(f)
+	
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -135,6 +140,10 @@ func (c *controller) acceptClientConnections(sock string, l net.Listener) {
 			continue
 		}
 		go func() {
+			glog.Printf("> accept", time.Now().UnixNano())
+			defer glog.Printf("< accept", time.Now().UnixNano())
+			
+			defer conn.Close()
 			err := c.processExternalKey(conn)
 			ret := success
 			if err != nil {
@@ -150,6 +159,9 @@ func (c *controller) acceptClientConnections(sock string, l net.Listener) {
 }
 
 func (c *controller) processExternalKey(conn net.Conn) error {
+	glog.Printf("> processExternalKey", time.Now().UnixNano())
+	defer glog.Printf("< processExternalKey", time.Now().UnixNano())
+	
 	buf := make([]byte, 1280)
 	nr, err := conn.Read(buf)
 	if err != nil {
@@ -162,7 +174,10 @@ func (c *controller) processExternalKey(conn net.Conn) error {
 
 	var sandbox Sandbox
 	search := SandboxContainerWalker(&sandbox, s.ContainerID)
+	glog.Printf("> WalkSandboxes", time.Now().UnixNano())
 	c.WalkSandboxes(search)
+	glog.Printf("< WalkSandboxes", time.Now().UnixNano())
+	
 	if sandbox == nil {
 		return types.BadRequestErrorf("no sandbox present for %s", s.ContainerID)
 	}

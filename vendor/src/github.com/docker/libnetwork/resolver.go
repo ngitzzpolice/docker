@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	glog "log"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libnetwork/iptables"
@@ -81,7 +82,7 @@ func (r *resolver) SetupFunc() func() {
 		addr := &net.UDPAddr{
 			IP: net.ParseIP(resolverIP),
 		}
-
+		glog.Printf("> Setup0", time.Now().UnixNano())
 		r.conn, err = net.ListenUDP("udp", addr)
 		if err != nil {
 			r.err = fmt.Errorf("error in opening name server socket %v", err)
@@ -89,12 +90,12 @@ func (r *resolver) SetupFunc() func() {
 		}
 		laddr := r.conn.LocalAddr()
 		_, ipPort, _ := net.SplitHostPort(laddr.String())
-
+		
 		// Listen on a TCP as well
 		tcpaddr := &net.TCPAddr{
 			IP: net.ParseIP(resolverIP),
 		}
-
+		glog.Printf("> Setup1", time.Now().UnixNano())
 		r.tcpListen, err = net.ListenTCP("tcp", tcpaddr)
 		if err != nil {
 			r.err = fmt.Errorf("error in opening name TCP server socket %v", err)
@@ -108,13 +109,14 @@ func (r *resolver) SetupFunc() func() {
 			{"-t", "nat", "-A", "OUTPUT", "-d", resolverIP, "-p", "tcp", "--dport", dnsPort, "-j", "DNAT", "--to-destination", ltcpaddr.String()},
 			{"-t", "nat", "-A", "POSTROUTING", "-s", resolverIP, "-p", "tcp", "--sport", tcpPort, "-j", "SNAT", "--to-source", ":" + dnsPort},
 		}
-
+		glog.Printf("> Setup2", time.Now().UnixNano())
 		for _, rule := range rules {
 			r.err = iptables.RawCombinedOutputNative(rule...)
 			if r.err != nil {
 				return
 			}
 		}
+		glog.Printf("> Setup3", time.Now().UnixNano())
 		r.err = nil
 	})
 }

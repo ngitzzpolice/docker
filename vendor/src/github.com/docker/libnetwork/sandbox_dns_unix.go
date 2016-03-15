@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	glog "log"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libnetwork/etchosts"
@@ -25,6 +27,7 @@ const (
 func (sb *sandbox) startResolver() {
 	sb.resolverOnce.Do(func() {
 		var err error
+		glog.Printf("> NewResolver", time.Now().UnixNano())
 		sb.resolver = NewResolver(sb)
 		defer func() {
 			if err != nil {
@@ -32,17 +35,26 @@ func (sb *sandbox) startResolver() {
 			}
 		}()
 
+		glog.Printf("> rebuildDNS", time.Now().UnixNano())
 		err = sb.rebuildDNS()
+
+		glog.Printf("< rebuildDNS", time.Now().UnixNano())
 		if err != nil {
 			log.Errorf("Updating resolv.conf failed for container %s, %q", sb.ContainerID(), err)
 			return
 		}
 		sb.resolver.SetExtServers(sb.extDNS)
 
+
+		glog.Printf("> sSbox.InvokeFunc", time.Now().UnixNano())
 		sb.osSbox.InvokeFunc(sb.resolver.SetupFunc())
+
+		glog.Printf("< sSbox.InvokeFunc", time.Now().UnixNano())
 		if err = sb.resolver.Start(); err != nil {
 			log.Errorf("Resolver Setup/Start failed for container %s, %q", sb.ContainerID(), err)
 		}
+
+		glog.Printf("< resolver.Started", time.Now().UnixNano())
 	})
 }
 
