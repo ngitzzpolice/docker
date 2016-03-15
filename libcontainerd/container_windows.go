@@ -16,6 +16,16 @@ type container struct {
 	// Platform specific fields are below here. There are none presently on Windows.
 }
 
+func (ctr *container) newProcess(friendlyName string) *process {
+	return &process{
+		processCommon: processCommon{
+			containerID:  ctr.containerID,
+			friendlyName: friendlyName,
+			client:       ctr.client,
+		},
+	}
+}
+
 func (ctr *container) start() error {
 	var err error
 
@@ -37,7 +47,6 @@ func (ctr *container) start() error {
 
 	// Convert the args array into the escaped command line.
 	for i, arg := range ctr.process.ociProcess.Args {
-		// Likely bugbug - we probably don't want to update the args, but just build locally. @darrenstahlmsft?
 		ctr.process.ociProcess.Args[i] = syscall.EscapeArg(arg)
 	}
 	createProcessParms.CommandLine = strings.Join(ctr.process.ociProcess.Args, " ")
@@ -45,11 +54,13 @@ func (ctr *container) start() error {
 
 	iopipe := &IOPipe{Terminal: ctr.process.ociProcess.Terminal}
 
-	var (
-		pid            uint32
-		stdout, stderr io.ReadCloser
-	)
-	// Start the command running in the container.
+	// Start the command running in the container. Note we always tell HCS to
+	// create stdout as it's required regardless of '-i' or '-t' options, so that
+	// docker can always grab the output through logs. We also tell HCS to always
+	// create stdin, even if it's not used - it will be closed shortly. Stderr
+	// is only created if it we're not -t.
+	var pid uint32
+	var stdout, stderr io.ReadCloser
 	pid, iopipe.Stdin, stdout, stderr, err = hcsshim.CreateProcessInComputeSystem(
 		ctr.containerID,
 		true,
@@ -69,7 +80,7 @@ func (ctr *container) start() error {
 		iopipe.Stderr = openReaderFromPipe(stderr)
 	}
 
-	//Save the PID as we'll need this in Kill()
+	// Save the PID
 	logrus.Debugf("Process started - PID %d", pid)
 	ctr.systemPid = uint32(pid)
 
@@ -83,6 +94,7 @@ func (ctr *container) start() error {
 		return err
 	}
 
+	// Tell the docker engine that the container has started.
 	return ctr.client.backend.StateChanged(ctr.containerID, StateInfo{
 		State: StateStart,
 		Pid:   ctr.systemPid,
