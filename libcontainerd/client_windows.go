@@ -90,10 +90,10 @@ type containerInit struct {
 	Layers                  []layer     // List of storage layers
 	ProcessorWeight         uint64      `json:",omitempty"` // CPU Shares 0..10000 on Windows; where 0 will be omitted and HCS will default.
 	ProcessorMaximum        int64       `json:",omitempty"` // CPU maximum usage percent 1..100
-	StorageIOPSMaximum      uint64      // Maximum Storage IOPS
-	StorageBandwidthMaximum uint64      // Maximum Storage Bandwidth in bytes per second
-	StorageSandboxSize      uint64      // Size in bytes that the container system drive should be expanded to if smaller
-	MemoryMaximumInMB       int64       // Maximum memory available to the container in Megabytes
+	StorageIOPSMaximum      uint64      `json:",omitempty"` // Maximum Storage IOPS
+	StorageBandwidthMaximum uint64      `json:",omitempty"` // Maximum Storage Bandwidth in bytes per second
+	StorageSandboxSize      uint64      `json:",omitempty"` // Size in bytes that the container system drive should be expanded to if smaller
+	MemoryMaximumInMB       int64       `json:",omitempty"` // Maximum memory available to the container in Megabytes
 	HostName                string      // Hostname
 	MappedDirectories       []mappedDir // List of mapped directories (volumes/mounts)
 	SandboxPath             string      // Location of unmounted sandbox (used for Hyper-V containers, not Windows Server containers)
@@ -139,7 +139,6 @@ func (clnt *client) Create(containerID string, spec Spec, unusedOnWindows ...Cre
 			if spec.Windows.Resources.Memory.Limit != nil {
 				cu.MemoryMaximumInMB = *spec.Windows.Resources.Memory.Limit / 1024 / 1024
 			}
-			cu.MemoryMaximumInMB = 200
 		}
 		if spec.Windows.Resources.Storage != nil {
 			if spec.Windows.Resources.Storage.Bps != nil {
@@ -348,12 +347,7 @@ func (clnt *client) AddProcess(containerID, processFriendlyName string, procToAd
 	// Configure the environment for the process
 	createProcessParms.Environment = setupEnvironmentVariables(procToAdd.Env)
 
-	// Convert the args array into the escaped command line.
-	for i, arg := range procToAdd.Args {
-		procToAdd.Args[i] = syscall.EscapeArg(arg)
-	}
-	createProcessParms.CommandLine = strings.Join(procToAdd.Args, " ")
-	logrus.Debugf("commandLine: %s", createProcessParms.CommandLine)
+	createProcessParms.CommandLine = createCommandLine(procToAdd.Args)
 
 	// Start the command running in the container. Note we always tell HCS to
 	// create stdout as it's required regardless of '-i' or '-t' options, so that

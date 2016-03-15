@@ -2,6 +2,9 @@ package libcontainerd
 
 import (
 	"strings"
+	"syscall"
+
+	"github.com/Sirupsen/logrus"
 )
 
 // setupEnvironmentVariables convert a string array of environment variables
@@ -15,4 +18,16 @@ func setupEnvironmentVariables(a []string) map[string]string {
 		}
 	}
 	return r
+}
+
+func createCommandLine(args []string) string {
+	escapedArgs := make([]string, len(args))
+	// Convert the args array into the escaped command line.
+	for i, arg := range args {
+		escapedArgs[i] = syscall.EscapeArg(arg)
+	}
+	commandLine := strings.Join(escapedArgs, " ")
+	logrus.Debugf("commandLine: %s", commandLine)
+
+	return commandLine
 }
