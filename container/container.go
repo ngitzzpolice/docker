@@ -362,17 +362,23 @@ func AttachStreams(ctx context.Context, streamConfig *runconfig.StreamConfig, op
 
 	if stdin != nil && openStdin {
 		cStdin = streamConfig.StdinPipe()
-		wg.Add(1)
+		if cStdin != nil {
+			wg.Add(1)
+		}
 	}
 
 	if stdout != nil {
 		cStdout = streamConfig.StdoutPipe()
-		wg.Add(1)
+		if cStdout != nil {
+			wg.Add(1)
+		}
 	}
 
 	if stderr != nil {
 		cStderr = streamConfig.StderrPipe()
-		wg.Add(1)
+		if cStderr != nil {
+			wg.Add(1)
+		}
 	}
 
 	// Connect stdin of container to the http conn.
