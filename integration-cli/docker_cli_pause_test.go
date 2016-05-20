@@ -8,11 +8,12 @@ import (
 )
 
 func (s *DockerSuite) TestPause(c *check.C) {
-	testRequires(c, DaemonIsLinux)
+	//testRequires(c, DaemonIsLinux)
 	defer unpauseAllContainers()
 
 	name := "testeventpause"
-	dockerCmd(c, "run", "-d", "--name", name, "busybox", "top")
+	runSleepingContainer(c, "--isolation=hyperv", "--name", name)
+	//dockerCmd(c, "run", "-d", "--name", name, "busybox", "top")
 
 	dockerCmd(c, "pause", name)
 	pausedContainers, err := getSliceOfPausedContainers()
@@ -30,7 +31,7 @@ func (s *DockerSuite) TestPause(c *check.C) {
 }
 
 func (s *DockerSuite) TestPauseMultipleContainers(c *check.C) {
-	testRequires(c, DaemonIsLinux)
+	//testRequires(c, DaemonIsLinux)
 	defer unpauseAllContainers()
 
 	containers := []string{
@@ -38,7 +39,8 @@ func (s *DockerSuite) TestPauseMultipleContainers(c *check.C) {
 		"testpausewithmorecontainers2",
 	}
 	for _, name := range containers {
-		dockerCmd(c, "run", "-d", "--name", name, "busybox", "top")
+		runSleepingContainer(c, "--isolation=hyperv", "--name", name)
+		//dockerCmd(c, "run", "-d", "--isolation=hyperv", "--name", name, "busybox", "top")
 	}
 	dockerCmd(c, append([]string{"pause"}, containers...)...)
 	pausedContainers, err := getSliceOfPausedContainers()
@@ -56,11 +58,4 @@ func (s *DockerSuite) TestPauseMultipleContainers(c *check.C) {
 		c.Assert(actions[len(actions)-2], checker.Equals, "pause")
 		c.Assert(actions[len(actions)-1], checker.Equals, "unpause")
 	}
-}
-
-func (s *DockerSuite) TestPauseFailsOnWindows(c *check.C) {
-	testRequires(c, DaemonIsWindows)
-	dockerCmd(c, "run", "-d", "--name=test", "busybox", "sleep 3")
-	out, _, _ := dockerCmdWithError("pause", "test")
-	c.Assert(out, checker.Contains, "Windows: Containers cannot be paused")
 }

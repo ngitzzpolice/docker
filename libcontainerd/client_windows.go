@@ -360,12 +360,44 @@ func (clnt *client) Resize(containerID, processFriendlyName string, width, heigh
 
 // Pause handles pause requests for containers
 func (clnt *client) Pause(containerID string) error {
-	return errors.New("Windows: Containers cannot be paused")
+	clnt.lock(containerID)
+	defer clnt.unlock(containerID)
+
+	container, err := clnt.getContainer(containerID)
+	if err != nil {
+		return err
+	}
+	if container.systemPid == 0 {
+		return fmt.Errorf("No active process for container %s", containerID)
+	}
+	if err := container.hcsContainer.Pause(); err != nil {
+		return err
+	}
+	return clnt.backend.StateChanged(containerID, StateInfo{
+		CommonStateInfo: CommonStateInfo{
+			State: StatePause,
+		}})
 }
 
 // Resume handles resume requests for containers
 func (clnt *client) Resume(containerID string) error {
-	return errors.New("Windows: Containers cannot be paused")
+	clnt.lock(containerID)
+	defer clnt.unlock(containerID)
+
+	container, err := clnt.getContainer(containerID)
+	if err != nil {
+		return err
+	}
+	if container.systemPid == 0 {
+		return fmt.Errorf("No active process for container %s", containerID)
+	}
+	if err := container.hcsContainer.Resume(); err != nil {
+		return err
+	}
+	return clnt.backend.StateChanged(containerID, StateInfo{
+		CommonStateInfo: CommonStateInfo{
+			State: StateResume,
+		}})
 }
 
 // Stats handles stats requests for containers

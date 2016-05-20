@@ -39,9 +39,9 @@ func (s *DockerSuite) TestCommitWithoutPause(c *check.C) {
 
 //test commit a paused container should not unpause it after commit
 func (s *DockerSuite) TestCommitPausedContainer(c *check.C) {
-	testRequires(c, DaemonIsLinux)
+	//testRequires(c, DaemonIsLinux)
 	defer unpauseAllContainers()
-	out, _ := dockerCmd(c, "run", "-i", "-d", "busybox")
+	out, _ := dockerCmd(c, "run", "--isolation=hyperv", "-i", "-d", "busybox")
 
 	cleanedContainerID := strings.TrimSpace(out)
 

@@ -156,9 +156,10 @@ func (s *DockerSuite) TestAttachDisconnect(c *check.C) {
 }
 
 func (s *DockerSuite) TestAttachPausedContainer(c *check.C) {
-	testRequires(c, DaemonIsLinux) // Containers cannot be paused on Windows
+	//testRequires(c, DaemonIsLinux) // Containers cannot be paused on Windows
 	defer unpauseAllContainers()
-	dockerCmd(c, "run", "-d", "--name=test", "busybox", "top")
+	//dockerCmd(c, "run", "-d", "--isolation=hyperv", "--name=test", "busybox", "top")
+	runSleepingContainer(c, "--isolation=hyperv", "--name=test")
 	dockerCmd(c, "pause", "test")
 	out, _, err := dockerCmdWithError("attach", "test")
 	c.Assert(err, checker.NotNil, check.Commentf(out))

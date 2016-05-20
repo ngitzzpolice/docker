@@ -49,9 +49,9 @@ func (s *DockerSuite) TestExecApiCreateNoValidContentType(c *check.C) {
 
 func (s *DockerSuite) TestExecApiCreateContainerPaused(c *check.C) {
 	// Not relevant on Windows as Windows containers cannot be paused
-	testRequires(c, DaemonIsLinux)
+	//testRequires(c, DaemonIsLinux)
 	name := "exec_create_test"
-	dockerCmd(c, "run", "-d", "-t", "--name", name, "busybox", "/bin/sh")
+	dockerCmd(c, "run", "-d", "-t", "--isolation=hyperv", "--name", name, "busybox", "/bin/sh")
 
 	dockerCmd(c, "pause", name)
 	status, body, err := sockRequest("POST", fmt.Sprintf("/containers/%s/exec", name), map[string]interface{}{"Cmd": []string{"true"}})
@@ -63,8 +63,9 @@ func (s *DockerSuite) TestExecApiCreateContainerPaused(c *check.C) {
 }
 
 func (s *DockerSuite) TestExecApiStart(c *check.C) {
-	testRequires(c, DaemonIsLinux) // Uses pause/unpause but bits may be salvagable to Windows to Windows CI
-	dockerCmd(c, "run", "-d", "--name", "test", "busybox", "top")
+	//testRequires(c, DaemonIsLinux) // Uses pause/unpause but bits may be salvagable to Windows to Windows CI
+	runSleepingContainer(c, "--isolation=hyperv", "--name", "test")
+	//dockerCmd(c, "run", "-d", "--isolation=hyperv", "--name", "test", "busybox", "top")
 
 	id := createExec(c, "test")
 	startExec(c, id, http.StatusOK)

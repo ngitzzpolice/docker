@@ -356,7 +356,7 @@ func (s *DockerSuite) TestGetStoppedContainerStats(c *check.C) {
 
 func (s *DockerSuite) TestContainerApiPause(c *check.C) {
 	// Problematic on Windows as Windows does not support pause
-	testRequires(c, DaemonIsLinux)
+	//testRequires(c, DaemonIsLinux)
 	defer unpauseAllContainers()
 	out, _ := dockerCmd(c, "run", "-d", "busybox", "sleep", "30")
 	ContainerID := strings.TrimSpace(out)

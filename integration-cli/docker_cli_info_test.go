@@ -122,9 +122,10 @@ func (s *DockerSuite) TestInfoDisplaysRunningContainers(c *check.C) {
 }
 
 func (s *DockerSuite) TestInfoDisplaysPausedContainers(c *check.C) {
-	testRequires(c, DaemonIsLinux)
+	//testRequires(c, DaemonIsLinux)
 
-	out, _ := dockerCmd(c, "run", "-d", "busybox", "top")
+	//out, _ := dockerCmd(c, "run", "-d", "--isolation=hyperv", "busybox", "top")
+	out, _ := runSleepingContainer(c, "--isolation=hyperv")
 	cleanedContainerID := strings.TrimSpace(out)
 
 	dockerCmd(c, "pause", cleanedContainerID)

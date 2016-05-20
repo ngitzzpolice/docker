@@ -130,10 +130,11 @@ func (s *DockerSuite) TestExecExitStatus(c *check.C) {
 
 func (s *DockerSuite) TestExecPausedContainer(c *check.C) {
 	// Windows does not support pause
-	testRequires(c, DaemonIsLinux)
+	//testRequires(c, DaemonIsLinux)
 	defer unpauseAllContainers()
 
-	out, _ := dockerCmd(c, "run", "-d", "--name", "testing", "busybox", "top")
+	//out, _ := dockerCmd(c, "run", "-d", "--isolation=hyperv", "--name", "testing", "busybox", "top")
+	out, _ := runSleepingContainer(c, "--isolation=hyperv", "--name", "testing")
 	ContainerID := strings.TrimSpace(out)
 
 	dockerCmd(c, "pause", "testing")
