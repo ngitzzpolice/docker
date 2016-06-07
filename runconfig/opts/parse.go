@@ -103,6 +103,7 @@ type ContainerOptions struct {
 	healthRetries     int
 	runtime           string
 	autoRemove        bool
+	credentialSpec    string
 
 	Image string
 	Args  []string
@@ -171,6 +172,7 @@ func AddFlags(flags *pflag.FlagSet) *ContainerOptions {
 	flags.BoolVar(&copts.privileged, "privileged", false, "Give extended privileges to this container")
 	flags.Var(&copts.securityOpt, "security-opt", "Security Options")
 	flags.StringVar(&copts.usernsMode, "userns", "", "User namespace to use")
+	flags.StringVar(&copts.credentialSpec, "credentialspec", "", "Credential spec for managed service account (Windows only)")
 
 	// Network and port publishing flag
 	flags.Var(&copts.extraHosts, "add-host", "Add a custom host-to-IP mapping (host:ip)")
@@ -243,6 +245,7 @@ func AddFlags(flags *pflag.FlagSet) *ContainerOptions {
 	flags.StringVar(&copts.shmSize, "shm-size", "", "Size of /dev/shm, default value is 64MB")
 	flags.StringVar(&copts.utsMode, "uts", "", "UTS namespace to use")
 	flags.StringVar(&copts.runtime, "runtime", "", "Runtime to use for this container")
+
 	return copts
 }
 
@@ -591,6 +594,7 @@ func Parse(flags *pflag.FlagSet, copts *ContainerOptions) (*container.Config, *c
 		Tmpfs:          tmpfs,
 		Sysctls:        copts.sysctls.GetAll(),
 		Runtime:        copts.runtime,
+		CredentialSpec: copts.credentialSpec,
 	}
 
 	// When allocating stdin in attached mode, close stdin at client disconnect
