@@ -135,6 +135,11 @@ func prettyPrintInfo(dockerCli *client.DockerCli, info types.Info) error {
 		fmt.Fprintf(dockerCli.Out(), "Default Runtime: %s\n", info.DefaultRuntime)
 	}
 
+	// Isolation only has meaning on a Windows daemon.
+	if info.OSType == "windows" {
+		fmt.Fprintf(dockerCli.Out(), "Default Isolation: %v\n", info.Isolation)
+	}
+
 	fmt.Fprintf(dockerCli.Out(), "Security Options:")
 	ioutils.FprintfIfNotEmpty(dockerCli.Out(), " %s", strings.Join(info.SecurityOptions, " "))
 	fmt.Fprintf(dockerCli.Out(), "\n")
